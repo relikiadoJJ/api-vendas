@@ -56,7 +56,7 @@ app.register(RoutesIndex)
 
 app
   .listen({
-    port: 3333,
+    port: env.PORT,
   })
   .then(() => {
     console.log('HTTP server running port 3333')

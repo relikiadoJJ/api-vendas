@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { EtherealMail } from '@config/email/EtherealMain'
 import { db } from '@shared/drizzle/db'
 import { usersTable } from '@shared/drizzle/db/schema/users'
@@ -35,6 +36,13 @@ export class SendForgotPasswordEmailService {
 
     const token = insertedToken.token
 
+    const forgotPasswordTemplate = path.resolve(
+      __dirname,
+      '..',
+      'views',
+      'ForgotPassword.hbs'
+    )
+
     const mailProvider = new EtherealMail()
 
     await mailProvider.sendMail({
@@ -44,10 +52,10 @@ export class SendForgotPasswordEmailService {
       },
       subject: '[API Vendas] Recuperação de senha',
       templateData: {
-        template: `Olá {{name}}: {{token}}`,
+        file: forgotPasswordTemplate,
         variables: {
           name: user.name ?? 'Usuario',
-          token,
+          link: `http://localhost:3333/reset_password?token=${token}`,
         },
       },
     })
