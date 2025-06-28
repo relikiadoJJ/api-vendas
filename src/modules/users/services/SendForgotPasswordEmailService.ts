@@ -21,7 +21,7 @@ export class SendForgotPasswordEmailService {
       throw new AppError('User does not exists.')
     }
 
-    const token = await db
+    const insertedToken = await db
       .insert(usersTokenTable)
       .values({ userId: user.id })
       .returning({
@@ -29,13 +29,27 @@ export class SendForgotPasswordEmailService {
       })
       .then(res => res[0])
 
-    // console.log(token)
+    if (!insertedToken?.token) {
+      throw new AppError('Falha ao gerar token de recuperação.')
+    }
+
+    const token = insertedToken.token
 
     const mailProvider = new EtherealMail()
 
     await mailProvider.sendMail({
-      to: user.email,
-      body: `Seu token de recuperação: ${token.token}`,
+      to: {
+        name: user.name,
+        email: user.email,
+      },
+      subject: '[API Vendas] Recuperação de senha',
+      templateData: {
+        template: `Olá {{name}}: {{token}}`,
+        variables: {
+          name: user.name ?? 'Usuario',
+          token,
+        },
+      },
     })
   }
 }
