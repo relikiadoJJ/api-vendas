@@ -1,8 +1,11 @@
-import type { FastifyRequest } from 'fastify'
+import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { DeleteProductService } from '../services/DeleteProductService'
 
-export async function DeleteProductController(request: FastifyRequest) {
+export async function DeleteProductController(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
   const productParamsSchema = z.object({
     id: z.string().uuid(),
   })
@@ -15,7 +18,7 @@ export async function DeleteProductController(request: FastifyRequest) {
     id,
   })
 
-  return {
+  return reply.status(200).send({
     product,
-  }
+  })
 }

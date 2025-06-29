@@ -1,8 +1,11 @@
-import type { FastifyRequest } from 'fastify'
+import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { UpdateProductService } from '../services/UpdateProductService'
 
-export async function UpdateProductController(request: FastifyRequest) {
+export async function UpdateProductController(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
   const productBodySchema = z.object({
     name: z
       .string()
@@ -47,7 +50,7 @@ export async function UpdateProductController(request: FastifyRequest) {
     quantity,
   })
 
-  return {
+  return reply.status(204).send({
     product,
-  }
+  })
 }
