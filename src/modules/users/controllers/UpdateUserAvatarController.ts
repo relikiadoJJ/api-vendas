@@ -1,7 +1,10 @@
-import type { FastifyRequest } from 'fastify'
+import type { FastifyReply, FastifyRequest } from 'fastify'
 import { UpdateUserAvatarService } from '../services/UpdateUserAvatarService'
 
-export async function UpdateUserAvatarController(request: FastifyRequest) {
+export async function UpdateUserAvatarController(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
   const { user, file } = request as FastifyRequest & {
     user: { sub: string }
     file: { filename: string }
@@ -14,5 +17,7 @@ export async function UpdateUserAvatarController(request: FastifyRequest) {
     avatarFilename: file.filename,
   })
 
-  return { user: updatedUser }
+  return reply.status(201).send({
+    user: updatedUser,
+  })
 }

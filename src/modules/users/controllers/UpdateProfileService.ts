@@ -1,8 +1,8 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { CreateUserService } from '../services/CreateUserService'
+import { UpdateProfileService } from '../services/UpdateProfileService'
 
-export async function CreateUserController(
+export async function UpdateProfileController(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
@@ -19,23 +19,25 @@ export async function CreateUserController(
         /[^A-Za-z0-9]/,
         'A senha deve conter pelo menos um caractere especial'
       ),
+    old_password: z.string(),
   })
+  const userId = request.user.sub
+  const { name, email, password, old_password } = userSchema.parse(request.body)
 
-  const { name, email, password } = userSchema.parse(request.body)
+  const updateProfile = new UpdateProfileService()
 
-  const createUser = new CreateUserService()
-
-  const user = await createUser.execute({
+  const user = await updateProfile.execute({
+    userId,
     name,
     email,
     password,
+    old_password,
   })
 
-  return reply.status(201).send({
+  return reply.status(200).send({
     user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
+      ...user,
+      password: undefined,
     },
   })
 }
