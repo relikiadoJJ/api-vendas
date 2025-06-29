@@ -1,7 +1,5 @@
-import { db } from '@shared/drizzle/db'
-import { productsTable } from '@shared/drizzle/db/schema/products'
 import { AppError } from '@shared/errors/AppError'
-import { eq } from 'drizzle-orm'
+import { ProductRepository } from '../drizzle/repositories/ProductsRepository'
 
 interface IRequest {
   id: string
@@ -11,37 +9,26 @@ interface IRequest {
 }
 
 export class UpdateProductService {
+  private productRepository = new ProductRepository()
+
   public async execute({ id, name, price, quantity }: IRequest) {
-    const product = await db
-      .select()
-      .from(productsTable)
-      .where(eq(productsTable.id, id))
-      .then(res => res[0])
+    const product = await this.productRepository.findById(id)
 
     if (!product) {
       throw new AppError('Product not found', 404)
     }
 
-    const productExists = await db
-      .select()
-      .from(productsTable)
-      .where(eq(productsTable.name, name))
-      .then(res => res[0])
+    const productExists = await this.productRepository.findByName(name)
 
     if (productExists) {
       throw new AppError('There is already one product with this name', 409)
     }
 
-    await db
-      .update(productsTable)
-      .set({ name, price: price.toFixed(2), quantity, updatedAt: new Date() })
-      .where(eq(productsTable.id, id))
-
-    const updatedProduct = await db
-      .select()
-      .from(productsTable)
-      .where(eq(productsTable.id, id))
-      .then(res => res[0])
+    const updatedProduct = await this.productRepository.updateProduct(id, {
+      name,
+      price,
+      quantity,
+    })
 
     return updatedProduct
   }

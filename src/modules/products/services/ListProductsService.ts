@@ -1,9 +1,10 @@
-import { db } from '@shared/drizzle/db'
-import { productsTable } from '@shared/drizzle/db/schema/products'
+import { ProductRepository } from '../drizzle/repositories/ProductsRepository'
 
 export class ListProductsService {
+  private productRepository = new ProductRepository()
+
   public async execute() {
-    const products = await db.select().from(productsTable)
+    const products = await this.productRepository.findManyProduct()
 
     return products
   }

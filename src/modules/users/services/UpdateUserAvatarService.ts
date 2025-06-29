@@ -5,6 +5,7 @@ import { db } from '@shared/drizzle/db'
 import { usersTable } from '@shared/drizzle/db/schema/users'
 import { AppError } from '@shared/errors/AppError'
 import { eq } from 'drizzle-orm'
+import { UserRepository } from '../drizzle/repositories/UsersRepository'
 
 interface IRequest {
   user_id: string
@@ -12,12 +13,10 @@ interface IRequest {
 }
 
 export class UpdateUserAvatarService {
+  private userRepository = new UserRepository()
+
   public async execute({ user_id, avatarFilename }: IRequest) {
-    const user = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, user_id))
-      .then(res => res[0])
+    const user = await this.userRepository.findById(user_id)
 
     if (!user) {
       throw new AppError('User not found.', 404)

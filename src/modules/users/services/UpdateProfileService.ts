@@ -1,8 +1,7 @@
-import { db } from '@shared/drizzle/db'
-import { usersTable } from '@shared/drizzle/db/schema/users'
+import type { usersTable } from '@shared/drizzle/db/schema/users'
 import { AppError } from '@shared/errors/AppError'
 import { hash, verify } from 'argon2'
-import { eq } from 'drizzle-orm'
+import { UserRepository } from '../drizzle/repositories/UsersRepository'
 
 interface IRequest {
   userId: string
@@ -13,6 +12,8 @@ interface IRequest {
 }
 
 export class UpdateProfileService {
+  private userRepository = new UserRepository()
+
   public async execute({
     userId,
     name,
@@ -20,23 +21,15 @@ export class UpdateProfileService {
     password,
     old_password,
   }: IRequest) {
-    const user = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .then(res => res[0])
+    const user = await this.userRepository.findById(userId)
 
     if (!user) {
       throw new AppError('User not found.')
     }
 
-    const userUpdateEmail = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, email))
-      .then(res => res[0])
+    const userWithEmail = await this.userRepository.findByEmail(email)
 
-    if (userUpdateEmail && userUpdateEmail.id !== userId) {
+    if (userWithEmail && userWithEmail.id !== userId) {
       throw new AppError('There is already one user with this email')
     }
 
@@ -50,22 +43,19 @@ export class UpdateProfileService {
         throw new AppError('Old password is required.')
       }
 
-      const checkOldPassword = await verify(user.password, old_password)
+      const isOldPasswordValid = await verify(user.password, old_password)
 
-      if (!checkOldPassword) {
+      if (!isOldPasswordValid) {
         throw new AppError('Old password does not match.')
       }
 
       updateData.password = await hash(password)
     }
 
-    await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId))
-
-    const updatedUser = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .then(res => res[0])
+    const updatedUser = await this.userRepository.updateUserData(
+      userId,
+      updateData
+    )
 
     return updatedUser
   }

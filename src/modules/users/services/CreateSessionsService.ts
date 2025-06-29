@@ -1,8 +1,6 @@
-import { db } from '@shared/drizzle/db'
-import { usersTable } from '@shared/drizzle/db/schema/users'
 import { AppError } from '@shared/errors/AppError'
 import { verify } from 'argon2'
-import { eq } from 'drizzle-orm'
+import { UserRepository } from '../drizzle/repositories/UsersRepository'
 
 interface IRequest {
   email: string
@@ -10,13 +8,10 @@ interface IRequest {
 }
 
 export class CreateSessionsService {
-  public async execute({ email, password }: IRequest) {
-    const users = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, email))
+  private userRepository = new UserRepository()
 
-    const user = users[0]
+  public async execute({ email, password }: IRequest) {
+    const user = await this.userRepository.findByEmail(email)
 
     if (!user) {
       throw new AppError('Incorrect email/password combination', 401)

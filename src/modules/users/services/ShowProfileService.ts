@@ -1,19 +1,15 @@
-import { db } from '@shared/drizzle/db'
-import { usersTable } from '@shared/drizzle/db/schema/users'
 import { AppError } from '@shared/errors/AppError'
-import { eq } from 'drizzle-orm'
+import { UserRepository } from '../drizzle/repositories/UsersRepository'
 
 interface IRequest {
   userId: string
 }
 
 export class ShowProfileService {
+  private userRepository = new UserRepository()
+
   public async execute({ userId }: IRequest) {
-    const user = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .then(res => res[0])
+    const user = await this.userRepository.findById(userId)
 
     if (!user) {
       throw new AppError('User not found.')

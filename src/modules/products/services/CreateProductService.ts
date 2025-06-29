@@ -1,7 +1,5 @@
-import { db } from '@shared/drizzle/db/index'
-import { productsTable } from '@shared/drizzle/db/schema/products'
 import { AppError } from '@shared/errors/AppError'
-import { eq } from 'drizzle-orm'
+import { ProductRepository } from '../drizzle/repositories/ProductsRepository'
 
 interface IRequest {
   name: string
@@ -10,25 +8,19 @@ interface IRequest {
 }
 
 export class CreateProductService {
+  private productRepository = new ProductRepository()
   public async execute({ name, price, quantity }: IRequest) {
-    const productExists = await db
-      .select()
-      .from(productsTable)
-      .where(eq(productsTable.name, name))
-      .then(res => res[0])
+    const productExists = await this.productRepository.findByName(name)
 
     if (productExists) {
       throw new AppError('There is already one product with this name', 409)
     }
 
-    const newProduct = await db
-      .insert(productsTable)
-      .values({ name, price: price.toFixed(2), quantity })
-      .returning()
-      .then(res => ({
-        ...res[0],
-        price: parseFloat(res[0].price),
-      }))
+    const newProduct = await this.productRepository.create({
+      name,
+      price,
+      quantity,
+    })
 
     return newProduct
   }

@@ -1,27 +1,21 @@
-import { db } from '@shared/drizzle/db'
-import { productsTable } from '@shared/drizzle/db/schema/products'
 import { AppError } from '@shared/errors/AppError'
-import { eq } from 'drizzle-orm'
+import { ProductRepository } from '../drizzle/repositories/ProductsRepository'
 
 interface IRequest {
   id: string
 }
 
 export class DeleteProductService {
+  private productRepository = new ProductRepository()
+
   public async execute({ id }: IRequest) {
-    const product = await db
-      .select()
-      .from(productsTable)
-      .where(eq(productsTable.id, id))
-      .then(res => res[0])
+    const product = await this.productRepository.findById(id)
 
     if (!product) {
       throw new AppError('Product not found', 404)
     }
 
-    const deleteProduct = await db
-      .delete(productsTable)
-      .where(eq(productsTable.id, id))
+    const deleteProduct = await this.productRepository.deleteProduct(id)
 
     return deleteProduct
   }

@@ -1,8 +1,6 @@
-import { db } from '@shared/drizzle/db'
-import { usersTable } from '@shared/drizzle/db/schema/users'
 import { AppError } from '@shared/errors/AppError'
 import { hash } from 'argon2'
-import { eq } from 'drizzle-orm'
+import { UserRepository } from '../drizzle/repositories/UsersRepository'
 
 interface IRequest {
   name: string
@@ -11,12 +9,10 @@ interface IRequest {
 }
 
 export class CreateUserService {
+  private userRepository = new UserRepository()
+
   public async execute({ name, email, password }: IRequest) {
-    const emailExists = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, email))
-      .then(res => res[0])
+    const emailExists = await this.userRepository.findByEmail(email)
 
     if (emailExists) {
       throw new AppError('Email address already user.', 409)
@@ -24,15 +20,11 @@ export class CreateUserService {
 
     const passwordHash = await hash(password)
 
-    const user = await db
-      .insert(usersTable)
-      .values({ name, email, password: passwordHash })
-      .returning({
-        id: usersTable.id,
-        name: usersTable.name,
-        email: usersTable.email,
-      })
-      .then(res => res[0])
+    const user = await this.userRepository.create({
+      name,
+      email,
+      password: passwordHash,
+    })
 
     return user
   }

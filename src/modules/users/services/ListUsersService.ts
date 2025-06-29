@@ -1,9 +1,10 @@
-import { db } from '@shared/drizzle/db'
-import { usersTable } from '@shared/drizzle/db/schema/users'
+import { UserRepository } from '../drizzle/repositories/UsersRepository'
 
 export class ListUsersService {
+  private userRepository = new UserRepository()
+
   public async execute() {
-    const users = await db.select().from(usersTable)
+    const users = await this.userRepository.findManyUsers()
 
     const usersWithoutPassword = users.map(({ password, ...users }) => users)
 

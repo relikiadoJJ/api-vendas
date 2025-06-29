@@ -1,10 +1,7 @@
-import { db } from '@shared/drizzle/db'
-import { usersTable } from '@shared/drizzle/db/schema/users'
-import { usersTokenTable } from '@shared/drizzle/db/schema/usersTokens'
 import { AppError } from '@shared/errors/AppError'
 import { hash } from 'argon2'
 import { addHours, isAfter } from 'date-fns'
-import { eq } from 'drizzle-orm'
+import { UserRepository } from '../drizzle/repositories/UsersRepository'
 
 interface IRequest {
   token: string
@@ -12,22 +9,16 @@ interface IRequest {
 }
 
 export class ResetPasswordService {
+  private userRepository = new UserRepository()
+
   public async execute({ token, password }: IRequest) {
-    const userToken = await db
-      .select()
-      .from(usersTokenTable)
-      .where(eq(usersTokenTable.token, token))
-      .then(res => res[0])
+    const userToken = await this.userRepository.findByToken(token)
 
     if (!userToken) {
       throw new AppError('Token do usuário não existe.')
     }
 
-    const user = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, userToken.userId))
-      .then(res => res[0])
+    const user = await this.userRepository.findById(userToken.id)
 
     if (!user) {
       throw new AppError('Usuário não existe.')
@@ -42,12 +33,9 @@ export class ResetPasswordService {
 
     const hashedPassword = await hash(password)
 
-    await db
-      .update(usersTable)
-      .set({ password: hashedPassword })
-      .where(eq(usersTable.id, user.id))
+    await this.userRepository.updatePassword(user.id, hashedPassword)
 
-    await db.delete(usersTokenTable).where(eq(usersTokenTable.token, token))
+    await this.userRepository.deletePassword(token)
 
     return user
   }
