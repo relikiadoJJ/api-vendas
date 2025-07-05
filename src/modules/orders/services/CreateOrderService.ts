@@ -1,8 +1,7 @@
-import { db } from '@shared/drizzle/db/index'
-import { customersTable } from '@shared/drizzle/db/schema/customers'
-import { productsTable } from '@shared/drizzle/db/schema/products'
+import { CustomersRepository } from '@modules/customers/drizzle/repositories/CustomersRepository'
+import { ProductRepository } from '@modules/products/drizzle/repositories/ProductsRepository'
 import { AppError } from '@shared/errors/AppError'
-import { eq } from 'drizzle-orm'
+import { OrdersRepository } from '../drizzle/repositories/OrdersRepository'
 
 interface IProduct {
   id: string
@@ -15,31 +14,81 @@ interface IRequest {
 }
 
 export class CreateOrderService {
+  private ordersRepository = new OrdersRepository()
+  private customersRepository = new CustomersRepository()
+  private productRepository = new ProductRepository()
+
   public async execute({ customerId, products }: IRequest) {
-    const customerExists = await db
-      .select()
-      .from(customersTable)
-      .where(eq(customersTable.id, customerId))
-      .then(res => res[0])
+    const customerExists = await this.customersRepository.findById(customerId)
 
     if (!customerExists) {
-      throw new AppError('Could not find any customer with the given ud', 404)
+      throw new AppError('Could not find any customer with the given id', 404)
     }
 
-    const existsProducts = await db
-      .select()
-      .from(productsTable)
-      .where(eq(productsTable.id, products.id))
+    const existsProducts = await this.productRepository.findAllByIds(products)
 
-    const newProduct = await db
-      .insert(productsTable)
-      .values({ name, price: price.toFixed(2), quantity })
-      .returning()
-      .then(res => ({
-        ...res[0],
-        price: parseFloat(res[0].price),
-      }))
+    if (!existsProducts.length) {
+      throw new AppError('Could not find any products with the given ids.', 404)
+    }
 
-    return newProduct
+    const existsProductsIds = existsProducts.map(p => p.id)
+
+    const checkInexistentProducts = products.filter(
+      p => !existsProductsIds.includes(p.id)
+    )
+
+    if (checkInexistentProducts.length) {
+      throw new AppError(
+        `Could not find product ${checkInexistentProducts[0].id}.`
+      )
+    }
+
+    const quantityUnavailable = products.filter(product => {
+      const dbProduct = existsProducts.find(p => p.id === product.id)
+      return dbProduct && dbProduct.quantity < product.quantity
+    })
+
+    if (quantityUnavailable.length) {
+      throw new AppError(
+        `Insufficient quantity for product ${quantityUnavailable[0].id}. Requested: ${quantityUnavailable[0].quantity}, Available: ${
+          existsProducts.find(p => p.id === quantityUnavailable[0].id)?.quantity
+        }`
+      )
+    }
+
+    const serializedProducts = products.map(product => {
+      const found = existsProducts.find(p => p.id === product.id)
+
+      if (!found) {
+        throw new AppError(`Product ${product.id} not found while serializing.`)
+      }
+
+      return {
+        product_id: found.id,
+        quantity: product.quantity,
+        price: parseFloat(found.price),
+      }
+    })
+
+    const order = await this.ordersRepository.createOrder({
+      customer: {
+        id: customerExists.customer.id,
+        name: customerExists.customer.name,
+      },
+      products: serializedProducts,
+    })
+
+    for (const product of serializedProducts) {
+      const original = existsProducts.find(p => p.id === product.product_id)
+      if (original) {
+        await this.productRepository.updateProduct(product.product_id, {
+          name: original.name,
+          price: parseFloat(original.price),
+          quantity: original.quantity - product.quantity,
+        })
+      }
+    }
+
+    return order
   }
 }

@@ -1,8 +1,5 @@
-import { db } from '@shared/drizzle/db'
-import { customersTable } from '@shared/drizzle/db/schema/customers'
-import { usersTable } from '@shared/drizzle/db/schema/users'
 import { AppError } from '@shared/errors/AppError'
-import { eq } from 'drizzle-orm'
+import { CustomersRepository } from '../drizzle/repositories/CustomersRepository'
 
 interface IRequest {
   name: string
@@ -10,26 +7,16 @@ interface IRequest {
 }
 
 export class CreateCustomerService {
+  private customersRepository = new CustomersRepository()
+
   public async execute({ name, email }: IRequest) {
-    const emailExists = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, email))
-      .then(res => res[0])
+    const emailExists = await this.customersRepository.findByEmail(email)
 
     if (emailExists) {
       throw new AppError('Email address already user.', 409)
     }
 
-    const customer = await db
-      .insert(customersTable)
-      .values({ name, email })
-      .returning({
-        id: usersTable.id,
-        name: usersTable.name,
-        email: usersTable.email,
-      })
-      .then(res => res[0])
+    const customer = await this.customersRepository.create({ name, email })
 
     return customer
   }

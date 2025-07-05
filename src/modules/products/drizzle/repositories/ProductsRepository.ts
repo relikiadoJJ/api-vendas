@@ -1,11 +1,15 @@
 import { db } from '@shared/drizzle/db'
 import { productsTable } from '@shared/drizzle/db/schema/products'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 
 interface ICreateProductDTO {
   name: string
   price: number
   quantity: number
+}
+
+interface IFindProducts {
+  id: string
 }
 
 export class ProductRepository {
@@ -75,5 +79,16 @@ export class ProductRepository {
       .where(eq(productsTable.id, id))
 
     return updatedProduct
+  }
+
+  public async findAllByIds(products: IFindProducts[]) {
+    const productIds = products.map(product => product.id)
+
+    const existsProducts = await db
+      .select()
+      .from(productsTable)
+      .where(inArray(productsTable.id, productIds))
+
+    return existsProducts
   }
 }
