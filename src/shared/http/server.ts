@@ -9,11 +9,13 @@ import fastify from 'fastify'
 import { secureHeadersPlugin } from 'src/@plugin/SecurityHeaders'
 import { ZodError } from 'zod'
 import { env } from './env'
+import { rateLimiterPlugin } from './middlewares/rateLimiterPlugin'
 import { RoutesIndex } from './routes'
 
 const app = fastify()
 
 app.register(secureHeadersPlugin)
+app.register(rateLimiterPlugin)
 
 app.register(fastifyJwt, {
   secret: env.JWT_SECRET,

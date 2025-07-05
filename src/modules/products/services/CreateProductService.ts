@@ -1,3 +1,4 @@
+import { RedisCache } from '@shared/cache/RedisCache'
 import { AppError } from '@shared/errors/AppError'
 import { ProductRepository } from '../drizzle/repositories/ProductsRepository'
 
@@ -9,7 +10,10 @@ interface IRequest {
 
 export class CreateProductService {
   private productRepository = new ProductRepository()
+
   public async execute({ name, price, quantity }: IRequest) {
+    const redisCache = new RedisCache()
+
     const productExists = await this.productRepository.findByName(name)
 
     if (productExists) {
@@ -21,6 +25,8 @@ export class CreateProductService {
       price,
       quantity,
     })
+
+    await redisCache.invalidate('api-vendas-PRODUCTS_LIST')
 
     return newProduct
   }

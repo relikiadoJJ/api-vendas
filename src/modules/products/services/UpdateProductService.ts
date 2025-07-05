@@ -1,3 +1,4 @@
+import { RedisCache } from '@shared/cache/RedisCache'
 import { AppError } from '@shared/errors/AppError'
 import { ProductRepository } from '../drizzle/repositories/ProductsRepository'
 
@@ -12,6 +13,8 @@ export class UpdateProductService {
   private productRepository = new ProductRepository()
 
   public async execute({ id, name, price, quantity }: IRequest) {
+    const redisCache = new RedisCache()
+
     const product = await this.productRepository.findById(id)
 
     if (!product) {
@@ -23,6 +26,8 @@ export class UpdateProductService {
     if (productExists) {
       throw new AppError('There is already one product with this name', 409)
     }
+
+    await redisCache.invalidate('api-vendas-PRODUCTS_LIST')
 
     const updatedProduct = await this.productRepository.updateProduct(id, {
       name,

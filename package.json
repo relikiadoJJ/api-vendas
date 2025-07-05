@@ -25,9 +25,12 @@
     "fastify-multer": "^2.0.3",
     "fastify-plugin": "^5.0.1",
     "handlebars": "^4.7.8",
+    "ioredis": "^5.6.1",
     "multer": "^2.0.1",
     "nodemailer": "^7.0.3",
     "pg": "^8.16.2",
+    "rate-limiter-flexible": "^7.1.1",
+    "redis": "^5.5.6",
     "typescript": "^5.8.3",
     "zod": "^3.25.67"
   },
